@@ -32,9 +32,6 @@ def main() -> None:
         type=str,
     )
     parser.add_argument(
-        "--debug", "-D", help="save unoptimized pdfs", action="store_true"
-    )
-    parser.add_argument(
         "--log-level",
         "-l",
         help="set the logging level",
