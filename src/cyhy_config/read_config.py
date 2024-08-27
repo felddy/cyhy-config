@@ -1,10 +1,10 @@
 """Reads and validates a CyHy configuration file."""
 
 # Standard Python Libraries
-import os
 import logging
-import tomllib
+import os
 import pprint
+import tomllib
 
 # Third-Party Libraries
 from pydantic import ValidationError
