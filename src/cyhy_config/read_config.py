@@ -5,17 +5,19 @@ import logging
 import os
 import pprint
 import tomllib
+from typing import Type, TypeVar
 
 # Third-Party Libraries
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 logger = logging.getLogger(__name__)
 
 
-from . import CyHyConfig
+# Define a TypeVar that is bound to BaseModel
+T = TypeVar("T", bound=BaseModel)
 
 
-def read_config(config_file: str) -> CyHyConfig:
+def read_config(config_file: str, model: Type[T]) -> T:
     """Read the configuration file and return its contents as a dictionary."""
     pp = pprint.PrettyPrinter(indent=4)
 
@@ -32,7 +34,7 @@ def read_config(config_file: str) -> CyHyConfig:
         raise e
 
     try:
-        config = CyHyConfig(**config_dict)
+        config = model(**config_dict)
         logger.debug("Parsed configuration:\n%s", pp.pformat(config.model_dump()))
         return config
     except ValidationError as e:
