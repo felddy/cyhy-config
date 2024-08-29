@@ -10,9 +10,7 @@ import tomllib
 
 # Third-Party Libraries
 from pydantic import ValidationError
-from rich.console import Console
 from rich.logging import RichHandler
-from rich.table import Table
 from rich.traceback import install as traceback_install
 
 from . import find_config, read_config
