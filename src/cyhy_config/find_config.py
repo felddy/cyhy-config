@@ -17,6 +17,8 @@ from pathlib import Path
 
 CYHY_CONFIG_PATH = "CYHY_CONFIG_PATH"
 
+logger = logging.getLogger(__name__)
+
 
 def find_config(config_path: str = None) -> Path:
     """Find a CyHy configuration file.
@@ -33,7 +35,7 @@ def find_config(config_path: str = None) -> Path:
     """
     # Check if the provided path exists
     if config_path and Path(config_path).exists():
-        logging.debug("Using configuration file passed as parameter: %s", config_path)
+        logger.debug("Using configuration file passed as parameter: %s", config_path)
         return Path(config_path)
 
     # Check environment variables
@@ -41,7 +43,7 @@ def find_config(config_path: str = None) -> Path:
     if env_value:
         env_path = Path(env_value)
         if env_path.exists():
-            logging.debug(
+            logger.debug(
                 "Using configuration file from environment variable: %s", env_path
             )
             return env_path
@@ -49,7 +51,7 @@ def find_config(config_path: str = None) -> Path:
     # Check the current working directory
     cwd_path = Path("cyhy.toml")
     if cwd_path.exists():
-        logging.debug(
+        logger.debug(
             "Using configuration file from current working directory: %s", cwd_path
         )
         return cwd_path
@@ -57,15 +59,15 @@ def find_config(config_path: str = None) -> Path:
     # Check the user's home directory
     home_path = Path.home() / ".cyhy/cyhy.toml"
     if home_path.exists():
-        logging.debug("Using configuration file from home directory: %s", home_path)
+        logger.debug("Using configuration file from home directory: %s", home_path)
         return home_path
 
     # Check the system's /etc directory
     etc_path = Path("/etc/cyhy.toml")
     if etc_path.exists():
-        logging.debug("Using configuration file from /etc directory: %s", etc_path)
+        logger.debug("Using configuration file from /etc directory: %s", etc_path)
         return etc_path
 
     # If no configuration file is found, raise an exception
-    logging.error("No CyHy configuration file found.")
+    logger.error("No CyHy configuration file found.")
     raise FileNotFoundError("No CyHy configuration file found.")
