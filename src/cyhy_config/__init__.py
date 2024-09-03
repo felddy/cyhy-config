@@ -6,12 +6,8 @@
 # Python package.
 
 from ._version import __version__  # noqa: F401
-from .find_config import find_config
-from .models import CyHyConfig
-from .read_config import read_config
+from .find_config import get_config
 
 __all__ = [
-    "CyHyConfig",
-    "find_config",
-    "read_config",
+    "get_config",
 ]
