@@ -41,7 +41,6 @@ def get_config(
     model: Optional[Type[T]] = None,
 ) -> T | dict:
     """Get the CyHy configuration."""
-
     # First we try to find the configuration file in SSM
     # If we can't find it there, we look for it in a file
     config = read_config_ssm(ssm_path, model)
@@ -66,7 +65,6 @@ def find_config_file(file_path: Optional[str] = None) -> Path:
     Raises:
         FileNotFoundError: If no configuration file is found.
     """
-
     # Check if the provided path exists
     if file_path and Path(file_path).exists():
         logger.debug("Using configuration file passed as parameter: %s", file_path)
@@ -111,7 +109,6 @@ def read_config_ssm(
     ssm_path: Optional[str] = None, model: Optional[Type[T]] = None
 ) -> T | dict | None:
     """Read the configuration from SSM and return its contents as a dictionary."""
-
     ssm = client("ssm")
     ssm_paths = [
         (ssm_path, "path"),
@@ -145,7 +142,6 @@ def read_config_ssm(
 
 def read_config_file(config_file: Path, model: Optional[Type[T]] = None) -> T | dict:
     """Read the configuration file and return its contents as a dictionary."""
-
     if not os.path.isfile(config_file):
         logger.error("Config file not found: %s", config_file)
         raise FileNotFoundError(f"Config file not found: {config_file}")
