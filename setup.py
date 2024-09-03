@@ -87,12 +87,14 @@ setup(
     py_modules=[splitext(basename(path))[0] for path in glob("src/*.py")],
     include_package_data=True,
     install_requires=[
+        "boto3",
         "pydantic",
         "rich",
         "setuptools >= 24.2.0",
     ],
     extras_require={
         "test": [
+            "boto3-stubs",
             "coverage",
             # coveralls 1.11.0 added a service number for calls from
             # GitHub Actions. This caused a regression which resulted in a 422
