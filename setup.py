@@ -108,5 +108,5 @@ setup(
             "pytest",
         ]
     },
-    entry_points={"console_scripts": ["cyhy-config = cyhy_config.cyhy_config:main"]},
+    entry_points={},
 )
