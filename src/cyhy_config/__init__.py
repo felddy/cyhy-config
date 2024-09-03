@@ -6,7 +6,7 @@
 # Python package.
 
 from ._version import __version__  # noqa: F401
-from .find_config import get_config
+from .cyhy_config import get_config
 
 __all__ = [
     "get_config",
