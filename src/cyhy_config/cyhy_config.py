@@ -109,7 +109,6 @@ def read_config_ssm(
     ssm_path: Optional[str] = None, model: Optional[Type[T]] = None
 ) -> T | dict | None:
     """Read the configuration from SSM and return its contents as a dictionary."""
-    ssm = client("ssm")
     ssm_paths = [
         (ssm_path, "path"),
         (environ.get(CYHY_CONFIG_SSM_PATH, None), "environment variable"),
@@ -117,6 +116,7 @@ def read_config_ssm(
 
     for path, source in ssm_paths:
         if path:
+            ssm = client("ssm")
             try:
                 response = ssm.get_parameter(Name=path, WithDecryption=True)
             except ClientError as e:
