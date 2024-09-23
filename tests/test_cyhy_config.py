@@ -1,142 +1,182 @@
 #!/usr/bin/env pytest -vs
-"""Tests for example."""
+"""Tests for cyhy_config."""
 
 # Standard Python Libraries
-import logging
 import os
-import sys
-from unittest.mock import patch
+from pathlib import Path
+import tomllib
+from unittest.mock import MagicMock, mock_open, patch
 
 # Third-Party Libraries
-import example
+from botocore.exceptions import ClientError
+from pydantic import BaseModel, ValidationError
 import pytest
 
-div_params = [
-    (1, 1, 1),
-    (2, 2, 1),
-    (0, 1, 0),
-    (8, 2, 4),
-]
-
-log_levels = (
-    "debug",
-    "info",
-    "warning",
-    "error",
-    "critical",
+# cisagov Libraries
+from cyhy_config.cyhy_config import (
+    find_config_file,
+    get_config,
+    read_config_file,
+    read_config_ssm,
+    validate_config,
 )
 
-# define sources of version strings
-RELEASE_TAG = os.getenv("RELEASE_TAG")
-PROJECT_VERSION = example.__version__
+
+class MockModel(BaseModel):
+    """Mock model for testing."""
+
+    key: str
 
 
-def test_stdout_version(capsys):
-    """Verify that version string sent to stdout agrees with the module version."""
-    with pytest.raises(SystemExit):
-        with patch.object(sys, "argv", ["bogus", "--version"]):
-            example.example.main()
-    captured = capsys.readouterr()
-    assert (
-        captured.out == f"{PROJECT_VERSION}\n"
-    ), "standard output by '--version' should agree with module.__version__"
-
-
-def test_running_as_module(capsys):
-    """Verify that the __main__.py file loads correctly."""
-    with pytest.raises(SystemExit):
-        with patch.object(sys, "argv", ["bogus", "--version"]):
-            # F401 is a "Module imported but unused" warning. This import
-            # emulates how this project would be run as a module. The only thing
-            # being done by __main__ is importing the main entrypoint of the
-            # package and running it, so there is nothing to use from this
-            # import. As a result, we can safely ignore this warning.
-            # Third-Party Libraries
-            import example.__main__  # noqa: F401
-    captured = capsys.readouterr()
-    assert (
-        captured.out == f"{PROJECT_VERSION}\n"
-    ), "standard output by '--version' should agree with module.__version__"
-
-
-@pytest.mark.skipif(
-    RELEASE_TAG in [None, ""], reason="this is not a release (RELEASE_TAG not set)"
-)
-def test_release_version():
-    """Verify that release tag version agrees with the module version."""
-    assert (
-        RELEASE_TAG == f"v{PROJECT_VERSION}"
-    ), "RELEASE_TAG does not match the project version"
-
-
-@pytest.mark.parametrize("level", log_levels)
-def test_log_levels(level):
-    """Validate commandline log-level arguments."""
-    with patch.object(sys, "argv", ["bogus", f"--log-level={level}", "1", "1"]):
-        with patch.object(logging.root, "handlers", []):
-            assert (
-                logging.root.hasHandlers() is False
-            ), "root logger should not have handlers yet"
-            return_code = None
-            try:
-                example.example.main()
-            except SystemExit as sys_exit:
-                return_code = sys_exit.code
-            assert return_code is None, "main() should return success"
-            assert (
-                logging.root.hasHandlers() is True
-            ), "root logger should now have a handler"
-            assert (
-                logging.getLevelName(logging.root.getEffectiveLevel()) == level.upper()
-            ), f"root logger level should be set to {level.upper()}"
-            assert return_code is None, "main() should return success"
-
-
-def test_bad_log_level():
-    """Validate bad log-level argument returns error."""
-    with patch.object(sys, "argv", ["bogus", "--log-level=emergency", "1", "1"]):
-        return_code = None
-        try:
-            example.example.main()
-        except SystemExit as sys_exit:
-            return_code = sys_exit.code
-        assert return_code == 1, "main() should exit with error"
-
-
-@pytest.mark.parametrize("dividend, divisor, quotient", div_params)
-def test_division(dividend, divisor, quotient):
-    """Verify division results."""
-    result = example.example_div(dividend, divisor)
-    assert result == quotient, "result should equal quotient"
-
-
-@pytest.mark.slow
-def test_slow_division():
-    """Example of using a custom marker.
-
-    This test will only be run if --runslow is passed to pytest.
-    Look in conftest.py to see how this is implemented.
+def test_find_config_file():
     """
-    # Standard Python Libraries
-    import time
+    Test the find_config_file function.
 
-    result = example.example_div(256, 16)
-    time.sleep(4)
-    assert result == 16, "result should equal be 16"
+    This function tests the behavior of the find_config_file function under
+    different scenarios.
+
+    Scenarios:
+    1. When the given path exists, it should return the path.
+    2. When the CYHY_CONFIG_PATH environment variable is set, it should return
+    the path specified in the environment variable.
+    3. When the cyhy.toml file exists in the current directory, it should return
+    the path to the file.
+    4. When the cyhy.toml file exists in the user's home directory, it should
+    return the path to the file.
+    5. When the cyhy.toml file exists in the /etc directory, it should return
+    the path to the file.
+    6. When no valid path is found, it should raise a FileNotFoundError.
+    """
+    with patch("cyhy_config.cyhy_config.Path.exists", return_value=True):
+        assert find_config_file("/mock/path") == Path("/mock/path")
+
+    with patch.dict(os.environ, {"CYHY_CONFIG_PATH": "/mock/env/path"}):
+        with patch("cyhy_config.cyhy_config.Path.exists", return_value=True):
+            assert find_config_file() == Path("/mock/env/path")
+
+    with patch("cyhy_config.cyhy_config.Path.exists", side_effect=[True]):
+        assert find_config_file() == Path("cyhy.toml")
+
+    with patch("cyhy_config.cyhy_config.Path.exists", side_effect=[False, True]):
+        assert find_config_file() == Path.home() / ".cyhy/cyhy.toml"
+
+    with patch("cyhy_config.cyhy_config.Path.exists", side_effect=[False, False, True]):
+        assert find_config_file() == Path("/etc/cyhy.toml")
+
+    with patch("cyhy_config.cyhy_config.Path.exists", return_value=False):
+        with pytest.raises(FileNotFoundError):
+            find_config_file()
 
 
-def test_zero_division():
-    """Verify that division by zero throws the correct exception."""
-    with pytest.raises(ZeroDivisionError):
-        example.example_div(1, 0)
+def test_read_config_ssm():
+    """
+    Test the read_config_ssm function.
+
+    This function tests the behavior of the read_config_ssm function under
+    different scenarios.
+
+    Scenarios:
+    1. When the CYHY_CONFIG_SSM_PATH environment variable is set, it should
+    retrieve the parameter value from AWS SSM and return the config.
+    2. When the parameter is not found in AWS SSM, it should return None.
+    """
+    mock_ssm_client = MagicMock()
+    mock_ssm_client.get_parameter.return_value = {
+        "Parameter": {"Value": 'key = "value"'}
+    }
+
+    with patch("cyhy_config.cyhy_config.client", return_value=mock_ssm_client):
+        with patch.dict(os.environ, {"CYHY_CONFIG_SSM_PATH": "/mock/ssm/path"}):
+            config = read_config_ssm(model=MockModel)
+            assert config.key == "value"
+
+    mock_ssm_client.get_parameter.side_effect = ClientError(
+        {"Error": {"Code": "ParameterNotFound"}}, "get_parameter"
+    )
+    with patch("cyhy_config.cyhy_config.client", return_value=mock_ssm_client):
+        assert read_config_ssm() is None
 
 
-def test_zero_divisor_argument():
-    """Verify that a divisor of zero is handled as expected."""
-    with patch.object(sys, "argv", ["bogus", "1", "0"]):
-        return_code = None
-        try:
-            example.example.main()
-        except SystemExit as sys_exit:
-            return_code = sys_exit.code
-        assert return_code == 1, "main() should exit with error"
+def test_read_config_file():
+    """
+    Test the read_config_file function.
+
+    This function tests the behavior of the read_config_file function under
+    different scenarios.
+
+    Scenarios:
+    1. When the file exists, it should read the file, parse the TOML data, and
+    return the config.
+    2. When the file does not exist, it should raise a FileNotFoundError.
+    3. When the TOML data is invalid, it should raise a TOMLDecodeError.
+    """
+    mock_file_data = b'key = "value"'
+    with patch("os.path.isfile", return_value=True):
+        with patch("builtins.open", mock_open(read_data=mock_file_data)):
+            with patch(
+                "cyhy_config.cyhy_config.tomllib.load", return_value={"key": "value"}
+            ):
+                config = read_config_file(Path("/mock/path"), model=MockModel)
+                assert config.key == "value"
+
+    with patch("os.path.isfile", return_value=True):
+        with patch("builtins.open", mock_open(read_data=mock_file_data)):
+            with patch(
+                "cyhy_config.cyhy_config.tomllib.load",
+                side_effect=tomllib.TOMLDecodeError("Error", "doc", 0),
+            ):
+                with pytest.raises(tomllib.TOMLDecodeError):
+                    read_config_file(Path("/mock/path"))
+
+
+def test_validate_config():
+    """
+    Test the validate_config function.
+
+    This function tests the behavior of the validate_config function under
+    different scenarios.
+
+    Scenarios:
+    1. When the config dictionary is valid, it should return the validated config.
+    2. When the config dictionary is empty, it should raise a ValidationError.
+    3. When the model is None, it should return the config dictionary as is.
+    """
+    config_dict = {"key": "value"}
+    config = validate_config(config_dict, MockModel)
+    assert config.key == "value"
+
+    with pytest.raises(ValidationError):
+        validate_config({}, MockModel)
+
+    config = validate_config(config_dict, None)
+    assert config == config_dict
+
+
+def test_get_config():
+    """
+    Test the get_config function.
+
+    This function tests the behavior of the get_config function under different
+    scenarios.
+
+    Scenarios:
+    1. When the config is retrieved from AWS SSM, it should return the config.
+    2. When the config is not found in AWS SSM, it should try to find the config
+    file and return the config.
+    """
+    with patch(
+        "cyhy_config.cyhy_config.read_config_ssm", return_value={"key": "value"}
+    ):
+        config = get_config(model=MockModel)
+        assert config["key"] == "value"
+
+    with patch("cyhy_config.cyhy_config.read_config_ssm", return_value=None):
+        with patch(
+            "cyhy_config.cyhy_config.find_config_file", return_value=Path("/mock/path")
+        ):
+            with patch(
+                "cyhy_config.cyhy_config.read_config_file",
+                return_value={"key": "value"},
+            ):
+                config = get_config(model=MockModel)
+                assert config["key"] == "value"
