@@ -18,7 +18,7 @@ from os import environ
 from pathlib import Path
 import pprint
 import tomllib
-from typing import Optional, Type, TypeVar
+from typing import Literal, Optional, Type, TypeVar, overload
 
 # Third-Party Libraries
 from boto3 import client
@@ -34,6 +34,31 @@ pp = pprint.PrettyPrinter(indent=4)
 
 # Define a TypeVar that is bound to BaseModel
 T = TypeVar("T", bound=BaseModel)
+
+
+# We use function overloading to provide different return types
+# depending on the arguments passed to the function.  Without it,
+# mypy would not be able to infer the return type of the function.
+
+
+@overload
+def get_config(
+    *,
+    file_path: Optional[str] = ...,
+    ssm_path: Optional[str] = ...,
+    model: Literal[None],
+) -> dict:
+    pass
+
+
+@overload
+def get_config(
+    *,
+    file_path: Optional[str] = ...,
+    ssm_path: Optional[str] = ...,
+    model: Type[T],
+) -> T:
+    pass
 
 
 def get_config(
