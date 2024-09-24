@@ -67,9 +67,14 @@ def find_config_file(file_path: Optional[str] = None) -> Path:
         FileNotFoundError: If no configuration file is found.
     """
     # Check if the provided path exists
-    if file_path and Path(file_path).exists():
-        logger.debug("Using configuration file passed as parameter: %s", file_path)
-        return Path(file_path)
+    if file_path:
+        if Path(file_path).exists():
+            logger.debug("Using configuration file passed as parameter: %s", file_path)
+            return Path(file_path)
+        else:
+            logger.warning(
+                "Configuration file passed as parameter not found: %s", file_path
+            )
 
     # Check environment variable for file path
     env_file_value = environ.get(CYHY_CONFIG_PATH, None)
@@ -80,6 +85,10 @@ def find_config_file(file_path: Optional[str] = None) -> Path:
                 "Using configuration file from environment variable: %s", env_path
             )
             return env_path
+        else:
+            logger.warning(
+                "Configuration file from environment variable not found: %s", env_path
+            )
 
     # Check the current working directory
     cwd_path = Path("cyhy.toml")
@@ -116,13 +125,15 @@ def read_config_ssm(
     ]
 
     for path, source in ssm_paths:
+        logger.debug("Checking SSM parameter from %s: %s", source, path)
         if path:
             ssm = client("ssm")
             try:
                 response = ssm.get_parameter(Name=path, WithDecryption=True)
             except ClientError as e:
                 if e.response["Error"]["Code"] == "ParameterNotFound":
-                    logger.debug("SSM parameter not found: %s", path)
+                    logger.warning("SSM parameter not found: %s", path)
+                    return None
                 else:
                     logger.error(e)
                     raise e
@@ -132,13 +143,12 @@ def read_config_ssm(
             try:
                 config_dict = tomllib.loads(param_value)
             except tomllib.TOMLDecodeError as e:
-                logger.error("Error decoding toml file: %s", e)
+                logger.error("Error decoding TOML: %s", param_value)
                 raise e
 
             return validate_config(config_dict, model)
-    else:
-        # If no SSM parameter is found, return None
-        return None
+
+    return None
 
 
 def read_config_file(config_file: Path, model: Optional[Type[T]] = None) -> T | dict:
@@ -152,7 +162,7 @@ def read_config_file(config_file: Path, model: Optional[Type[T]] = None) -> T | 
         with open(config_file, "rb") as f:
             config_dict = tomllib.load(f)
     except tomllib.TOMLDecodeError as e:
-        logger.error("Error decoding toml file: %s", e)
+        logger.error("Error decoding TOML file: %s", config_file)
         raise e
 
     return validate_config(config_dict, model)

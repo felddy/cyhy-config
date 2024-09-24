@@ -34,35 +34,45 @@ def test_find_config_file():
 
     This function tests the behavior of the find_config_file function under
     different scenarios.
-
-    Scenarios:
-    1. When the given path exists, it should return the path.
-    2. When the CYHY_CONFIG_PATH environment variable is set, it should return
-    the path specified in the environment variable.
-    3. When the cyhy.toml file exists in the current directory, it should return
-    the path to the file.
-    4. When the cyhy.toml file exists in the user's home directory, it should
-    return the path to the file.
-    5. When the cyhy.toml file exists in the /etc directory, it should return
-    the path to the file.
-    6. When no valid path is found, it should raise a FileNotFoundError.
     """
+    # When the given path exists, it should return the path.
     with patch("cyhy_config.cyhy_config.Path.exists", return_value=True):
         assert find_config_file("/mock/path") == Path("/mock/path")
 
+    # When the given path does not exist, it returns the next valid path.  In
+    # this case, that is the current directory.
+    with patch("cyhy_config.cyhy_config.Path.exists", side_effect=[False, True]):
+        assert find_config_file("/mock/path") == Path("cyhy.toml")
+
+    # When the CYHY_CONFIG_PATH environment variable is set, it should return
+    # the path specified in the environment variable.
     with patch.dict(os.environ, {"CYHY_CONFIG_PATH": "/mock/env/path"}):
         with patch("cyhy_config.cyhy_config.Path.exists", return_value=True):
             assert find_config_file() == Path("/mock/env/path")
 
+    # When the CYHY_CONFIG_PATH environment variable is set, but does not exist,
+    # it returns the next valid path.  In this case, that is the current
+    # directory.
+    with patch.dict(os.environ, {"CYHY_CONFIG_PATH": "/mock/env/path"}):
+        with patch("cyhy_config.cyhy_config.Path.exists", side_effect=[False, True]):
+            assert find_config_file() == Path("cyhy.toml")
+
+    # When the cyhy.toml file exists in the current directory, it should return
+    # the path to the file.
     with patch("cyhy_config.cyhy_config.Path.exists", side_effect=[True]):
         assert find_config_file() == Path("cyhy.toml")
 
+    # When the cyhy.toml file exists in the user's home directory, it should
+    # return the path to the file.
     with patch("cyhy_config.cyhy_config.Path.exists", side_effect=[False, True]):
         assert find_config_file() == Path.home() / ".cyhy/cyhy.toml"
 
+    # When the cyhy.toml file exists in the /etc directory, it should return
+    # the path to the file.
     with patch("cyhy_config.cyhy_config.Path.exists", side_effect=[False, False, True]):
         assert find_config_file() == Path("/etc/cyhy.toml")
 
+    # When no valid path is found, it should raise a FileNotFoundError.
     with patch("cyhy_config.cyhy_config.Path.exists", return_value=False):
         with pytest.raises(FileNotFoundError):
             find_config_file()
@@ -74,27 +84,49 @@ def test_read_config_ssm():
 
     This function tests the behavior of the read_config_ssm function under
     different scenarios.
-
-    Scenarios:
-    1. When the CYHY_CONFIG_SSM_PATH environment variable is set, it should
-    retrieve the parameter value from AWS SSM and return the config.
-    2. When the parameter is not found in AWS SSM, it should return None.
     """
     mock_ssm_client = MagicMock()
     mock_ssm_client.get_parameter.return_value = {
         "Parameter": {"Value": 'key = "value"'}
     }
 
+    # When the CYHY_CONFIG_SSM_PATH environment variable is set, it should
+    # retrieve the parameter value from AWS SSM and return the config.
     with patch("cyhy_config.cyhy_config.client", return_value=mock_ssm_client):
         with patch.dict(os.environ, {"CYHY_CONFIG_SSM_PATH": "/mock/ssm/path"}):
             config = read_config_ssm(model=MockModel)
             assert config.key == "value"
 
+    # When the parameter is not found in AWS SSM, it should return None.
     mock_ssm_client.get_parameter.side_effect = ClientError(
         {"Error": {"Code": "ParameterNotFound"}}, "get_parameter"
     )
     with patch("cyhy_config.cyhy_config.client", return_value=mock_ssm_client):
-        assert read_config_ssm() is None
+        with patch.dict(os.environ, {"CYHY_CONFIG_SSM_PATH": "/mock/ssm/bad_path"}):
+            assert read_config_ssm() is None
+
+    # When SSM responds with an error code other than ParameterNotFound, it
+    # should raise a ClientError.
+    mock_ssm_client.get_parameter.side_effect = ClientError(
+        {"Error": {"Code": "SchrödingersParameterError"}}, "get_parameter"
+    )
+    with patch("cyhy_config.cyhy_config.client", return_value=mock_ssm_client):
+        with patch.dict(os.environ, {"CYHY_CONFIG_SSM_PATH": "/mock/ssm/bad_path"}):
+            with pytest.raises(ClientError):
+                read_config_ssm()
+
+    # When SSM returns bad TOML data, it should raise a TOMLDecodeError.
+    mock_ssm_client = MagicMock()
+    mock_ssm_client.get_parameter.return_value = {
+        "Parameter": {"Value": "This is not valid TOML"}
+    }
+    with patch("cyhy_config.cyhy_config.client", return_value=mock_ssm_client):
+        with patch.dict(os.environ, {"CYHY_CONFIG_SSM_PATH": "/mock/ssm/path"}):
+            with pytest.raises(tomllib.TOMLDecodeError):
+                read_config_ssm()
+
+    # Test that None is returned if no SSM paths are provided.
+    assert read_config_ssm() is None
 
 
 def test_read_config_file():
@@ -103,14 +135,11 @@ def test_read_config_file():
 
     This function tests the behavior of the read_config_file function under
     different scenarios.
-
-    Scenarios:
-    1. When the file exists, it should read the file, parse the TOML data, and
-    return the config.
-    2. When the file does not exist, it should raise a FileNotFoundError.
-    3. When the TOML data is invalid, it should raise a TOMLDecodeError.
     """
     mock_file_data = b'key = "value"'
+
+    # When the file exists, it should read the file, parse the TOML data, and
+    # return the config.
     with patch("os.path.isfile", return_value=True):
         with patch("builtins.open", mock_open(read_data=mock_file_data)):
             with patch(
@@ -119,6 +148,12 @@ def test_read_config_file():
                 config = read_config_file(Path("/mock/path"), model=MockModel)
                 assert config.key == "value"
 
+    # When the file does not exist, it should raise a FileNotFoundError.
+    with patch("os.path.isfile", return_value=False):
+        with pytest.raises(FileNotFoundError):
+            read_config_file(Path("/mock/path"))
+
+    # When the TOML data is invalid, it should raise a TOMLDecodeError.
     with patch("os.path.isfile", return_value=True):
         with patch("builtins.open", mock_open(read_data=mock_file_data)):
             with patch(
@@ -135,19 +170,17 @@ def test_validate_config():
 
     This function tests the behavior of the validate_config function under
     different scenarios.
-
-    Scenarios:
-    1. When the config dictionary is valid, it should return the validated config.
-    2. When the config dictionary is empty, it should raise a ValidationError.
-    3. When the model is None, it should return the config dictionary as is.
     """
+    # When the config dictionary is valid, it should return the validated config.
     config_dict = {"key": "value"}
     config = validate_config(config_dict, MockModel)
     assert config.key == "value"
 
+    # When the config dictionary is empty, it should raise a ValidationError.
     with pytest.raises(ValidationError):
         validate_config({}, MockModel)
 
+    # When the model is None, it should return the config dictionary as is.
     config = validate_config(config_dict, None)
     assert config == config_dict
 
@@ -158,18 +191,16 @@ def test_get_config():
 
     This function tests the behavior of the get_config function under different
     scenarios.
-
-    Scenarios:
-    1. When the config is retrieved from AWS SSM, it should return the config.
-    2. When the config is not found in AWS SSM, it should try to find the config
-    file and return the config.
     """
+    # When the config is retrieved from AWS SSM, it should return the config.
     with patch(
         "cyhy_config.cyhy_config.read_config_ssm", return_value={"key": "value"}
     ):
         config = get_config(model=MockModel)
         assert config["key"] == "value"
 
+    # When the config is not found in AWS SSM, it should try to find the config
+    # file and return the config.
     with patch("cyhy_config.cyhy_config.read_config_ssm", return_value=None):
         with patch(
             "cyhy_config.cyhy_config.find_config_file", return_value=Path("/mock/path")
