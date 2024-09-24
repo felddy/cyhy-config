@@ -90,7 +90,6 @@ setup(
     install_requires=[
         "boto3",
         "pydantic",
-        "rich",
         "setuptools >= 24.2.0",
     ],
     extras_require={
