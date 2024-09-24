@@ -13,8 +13,8 @@ from pydantic import BaseModel, ValidationError
 import pytest
 
 # cisagov Libraries
+from cyhy_config import __version__
 from cyhy_config.cyhy_config import (
-    __version__,
     find_config_file,
     get_config,
     read_config_file,
