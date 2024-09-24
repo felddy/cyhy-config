@@ -121,10 +121,7 @@ def test_read_config_ssm_parameter_not_found():
 
 
 def test_read_config_ssm_other_client_error():
-    """Test read_config_ssm.
-
-    When SSM responds with an error code other than ParameterNotFound.
-    """
+    """Test read_config_ssm when SSM responds with an error code other than ParameterNotFound."""
     mock_ssm_client = MagicMock()
     mock_ssm_client.get_parameter.side_effect = ClientError(
         {"Error": {"Code": "SchrödingersParameterError"}}, "get_parameter"
