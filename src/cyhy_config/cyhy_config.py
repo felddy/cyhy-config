@@ -48,7 +48,7 @@ def get_config(
     ssm_path: Optional[str] = ...,
     model: Literal[None],
 ) -> dict:
-    pass
+    pass  # pragma: no cover
 
 
 @overload
@@ -58,7 +58,7 @@ def get_config(
     ssm_path: Optional[str] = ...,
     model: Type[T],
 ) -> T:
-    pass
+    pass  # pragma: no cover
 
 
 def get_config(
