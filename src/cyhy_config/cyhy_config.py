@@ -2,13 +2,13 @@
 
 This module provides a function to find a CyHy configuration file.
 
-It will search in the following locations:
- - A location passed in as a parameter
- - Environment variables for an SSM parameter path
- - Environment variables for a file path
- - The current working directory
- - The user's home directory
- - The system's /etc directory
+It will search in the following locations, in this order:
+ 1. A location passed in as a parameter
+ 2. Environment variable for an SSM parameter path
+ 3. Environment variable for a file path
+ 4. The current working directory
+ 5. The user's home directory
+ 6. The system's /etc directory
 """
 
 # Standard Python Libraries
