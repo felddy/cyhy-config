@@ -28,7 +28,8 @@ from pydantic import BaseModel, ValidationError
 CYHY_CONFIG_PATH = "CYHY_CONFIG_PATH"
 CYHY_CONFIG_SSM_PATH = "CYHY_CONFIG_SSM_PATH"
 
-logger = logging.getLogger(__name__)
+# Ensure the logger is under the common CyHy namespace
+logger = logging.getLogger(f"cyhy.{__name__}")
 pp = pprint.PrettyPrinter(indent=4)
 
 # Define a TypeVar that is bound to BaseModel
