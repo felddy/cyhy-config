@@ -93,13 +93,20 @@ setup(
         "setuptools >= 24.2.0",
     ],
     extras_require={
+        # IMPORTANT: Keep type hinting-related dependencies in sync with the
+        # mypy pre-commit hook configuration (see .pre-commit-config.yaml). Any
+        # changes to type hinting-related dependencies here should be reflected
+        # in the 'additional_dependencies' field of the mypy pre-commit hook to
+        # avoid discrepancies in type checking between environments.
         "test": [
             "boto3-stubs",
             "coverage",
             "coveralls",
             "pre-commit",
+            "pydantic-settings",
             "pytest-cov",
             "pytest",
+            "types-setuptools",
         ]
     },
     entry_points={},

@@ -156,9 +156,9 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies:
+          - boto3-stubs
           - pydantic
           - pydantic-settings
-          - types-boto3
           - types-setuptools
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.15.2
