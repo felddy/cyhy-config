@@ -90,7 +90,7 @@ setup(
     install_requires=[
         "boto3",
         "pydantic",
-        "setuptools >= 24.2.0",
+        "setuptools",
     ],
     extras_require={
         # IMPORTANT: Keep type hinting-related dependencies in sync with the
