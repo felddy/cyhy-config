@@ -57,8 +57,8 @@ setup(
         "Tracker": "https://github.com/cisagov/cyhy-config/issues",
     },
     # Author details
-    author="Cybersecurity and Infrastructure Security Agency",
-    author_email="github@cisa.dhs.gov",
+    author="Mark Feldhousen",
+    author_email="mark.feldhousen@gwe.cisa.dhs.gov",
     license="License :: CC0 1.0 Universal (CC0 1.0) Public Domain Dedication",
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
