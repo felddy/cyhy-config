@@ -23,8 +23,8 @@ from cyhy_config.cyhy_config import (
 )
 
 
-class MockModel(BaseModel):
-    """Mock model for testing."""
+class TestModel(BaseModel):
+    """A simple model for testing."""
 
     key: str
 
@@ -104,7 +104,7 @@ def test_read_config_ssm_env_var_set():
 
     with patch("cyhy_config.cyhy_config.client", return_value=mock_ssm_client):
         with patch.dict(os.environ, {"CYHY_CONFIG_SSM_PATH": "/mock/ssm/path"}):
-            config = read_config_ssm(model=MockModel)
+            config = read_config_ssm(model=TestModel)
             assert config.key == "value"
 
 
@@ -159,7 +159,7 @@ def test_read_config_file_file_exists():
             with patch(
                 "cyhy_config.cyhy_config.tomllib.load", return_value={"key": "value"}
             ):
-                config = read_config_file(Path("/mock/path"), model=MockModel)
+                config = read_config_file(Path("/mock/path"), model=TestModel)
                 assert config.key == "value"
 
 
@@ -186,14 +186,14 @@ def test_read_config_file_invalid_toml():
 def test_validate_config_valid_dict():
     """Test validate_config with a valid config dictionary."""
     config_dict = {"key": "value"}
-    config = validate_config(config_dict, MockModel)
+    config = validate_config(config_dict, TestModel)
     assert config.key == "value"
 
 
 def test_validate_config_empty_dict():
     """Test validate_config with an empty config dictionary."""
     with pytest.raises(ValidationError):
-        validate_config({}, MockModel)
+        validate_config({}, TestModel)
 
 
 def test_validate_config_no_model():
@@ -208,7 +208,7 @@ def test_get_config_from_ssm():
     with patch(
         "cyhy_config.cyhy_config.read_config_ssm", return_value={"key": "value"}
     ):
-        config = get_config(model=MockModel)
+        config = get_config(model=TestModel)
         assert config["key"] == "value"
 
 
@@ -222,5 +222,5 @@ def test_get_config_fallback_to_file():
                 "cyhy_config.cyhy_config.read_config_file",
                 return_value={"key": "value"},
             ):
-                config = get_config(model=MockModel)
+                config = get_config(model=TestModel)
                 assert config["key"] == "value"
