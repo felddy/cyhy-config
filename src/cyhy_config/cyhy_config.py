@@ -25,8 +25,11 @@ from boto3 import client
 from botocore.exceptions import ClientError
 from pydantic import BaseModel, ValidationError
 
-CYHY_CONFIG_PATH = "CYHY_CONFIG_PATH"
-CYHY_CONFIG_SSM_PATH = "CYHY_CONFIG_SSM_PATH"
+CONFIG_PATH_CWD = Path("cyhy.toml")
+CONFIG_PATH_ETC = Path("/etc/cyhy.toml")
+CONFIG_PATH_HOME = Path.home() / ".cyhy/cyhy.toml"
+CYHY_CONFIG_PATH_ENV = "CYHY_CONFIG_PATH"
+CYHY_CONFIG_SSM_PATH_ENV = "CYHY_CONFIG_SSM_PATH"
 
 # Ensure the logger is under the common CyHy namespace
 logger = logging.getLogger(f"cyhy.{__name__}")
@@ -102,7 +105,7 @@ def find_config_file(file_path: Optional[str] = None) -> Path:
             )
 
     # Check environment variable for file path
-    env_file_value = environ.get(CYHY_CONFIG_PATH, None)
+    env_file_value = environ.get(CYHY_CONFIG_PATH_ENV, None)
     if env_file_value:
         env_path = Path(env_file_value)
         if env_path.exists():
@@ -116,24 +119,26 @@ def find_config_file(file_path: Optional[str] = None) -> Path:
             )
 
     # Check the current working directory
-    cwd_path = Path("cyhy.toml")
-    if cwd_path.exists():
+    if CONFIG_PATH_CWD.exists():
         logger.debug(
-            "Using configuration file from current working directory: %s", cwd_path
+            "Using configuration file from current working directory: %s",
+            CONFIG_PATH_CWD,
         )
-        return cwd_path
+        return CONFIG_PATH_CWD
 
     # Check the user's home directory
-    home_path = Path.home() / ".cyhy/cyhy.toml"
-    if home_path.exists():
-        logger.debug("Using configuration file from home directory: %s", home_path)
-        return home_path
+    if CONFIG_PATH_HOME.exists():
+        logger.debug(
+            "Using configuration file from home directory: %s", CONFIG_PATH_HOME
+        )
+        return CONFIG_PATH_HOME
 
     # Check the system's /etc directory
-    etc_path = Path("/etc/cyhy.toml")
-    if etc_path.exists():
-        logger.debug("Using configuration file from /etc directory: %s", etc_path)
-        return etc_path
+    if CONFIG_PATH_ETC.exists():
+        logger.debug(
+            "Using configuration file from /etc directory: %s", CONFIG_PATH_ETC
+        )
+        return CONFIG_PATH_ETC
 
     # If no configuration file is found, raise an exception
     logger.error("No CyHy configuration file found.")
@@ -146,7 +151,7 @@ def read_config_ssm(
     """Read the configuration from SSM and return its contents as a dictionary."""
     ssm_paths = [
         (ssm_path, "path"),
-        (environ.get(CYHY_CONFIG_SSM_PATH, None), "environment variable"),
+        (environ.get(CYHY_CONFIG_SSM_PATH_ENV, None), "environment variable"),
     ]
 
     for path, source in ssm_paths:

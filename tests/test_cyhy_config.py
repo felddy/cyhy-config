@@ -15,6 +15,11 @@ import pytest
 # cisagov Libraries
 from cyhy_config import __version__
 from cyhy_config.cyhy_config import (
+    CONFIG_PATH_CWD,
+    CONFIG_PATH_ETC,
+    CONFIG_PATH_HOME,
+    CYHY_CONFIG_PATH_ENV,
+    CYHY_CONFIG_SSM_PATH_ENV,
     find_config_file,
     get_config,
     read_config_file,
@@ -53,39 +58,39 @@ def test_find_config_file_given_path_exists():
 def test_find_config_file_given_path_does_not_exist():
     """Test find_config_file when the given path does not exist."""
     with patch("cyhy_config.cyhy_config.Path.exists", side_effect=[False, True]):
-        assert find_config_file("/mock/path") == Path("cyhy.toml")
+        assert find_config_file("/mock/path") == CONFIG_PATH_CWD
 
 
 def test_find_config_file_env_var_set():
     """Test find_config_file when the CYHY_CONFIG_PATH environment variable is set."""
-    with patch.dict(os.environ, {"CYHY_CONFIG_PATH": "/mock/env/path"}):
+    with patch.dict(os.environ, {CYHY_CONFIG_PATH_ENV: "/mock/env/path"}):
         with patch("cyhy_config.cyhy_config.Path.exists", return_value=True):
             assert find_config_file() == Path("/mock/env/path")
 
 
 def test_find_config_file_env_var_set_but_does_not_exist():
     """Test find_config_file when the CYHY_CONFIG_PATH environment variable is set but does not exist."""
-    with patch.dict(os.environ, {"CYHY_CONFIG_PATH": "/mock/env/path"}):
+    with patch.dict(os.environ, {CYHY_CONFIG_PATH_ENV: "/mock/env/path"}):
         with patch("cyhy_config.cyhy_config.Path.exists", side_effect=[False, True]):
-            assert find_config_file() == Path("cyhy.toml")
+            assert find_config_file() == CONFIG_PATH_CWD
 
 
 def test_find_config_file_in_current_directory():
     """Test find_config_file when the cyhy.toml file exists in the current directory."""
     with patch("cyhy_config.cyhy_config.Path.exists", side_effect=[True]):
-        assert find_config_file() == Path("cyhy.toml")
+        assert find_config_file() == CONFIG_PATH_CWD
 
 
 def test_find_config_file_in_home_directory():
     """Test find_config_file when the cyhy.toml file exists in the user's home directory."""
     with patch("cyhy_config.cyhy_config.Path.exists", side_effect=[False, True]):
-        assert find_config_file() == Path.home() / ".cyhy/cyhy.toml"
+        assert find_config_file() == CONFIG_PATH_HOME
 
 
 def test_find_config_file_in_etc_directory():
     """Test find_config_file when the cyhy.toml file exists in the /etc directory."""
     with patch("cyhy_config.cyhy_config.Path.exists", side_effect=[False, False, True]):
-        assert find_config_file() == Path("/etc/cyhy.toml")
+        assert find_config_file() == CONFIG_PATH_ETC
 
 
 def test_find_config_file_no_valid_path():
@@ -103,7 +108,7 @@ def test_read_config_ssm_env_var_set():
     }
 
     with patch("cyhy_config.cyhy_config.client", return_value=mock_ssm_client):
-        with patch.dict(os.environ, {"CYHY_CONFIG_SSM_PATH": "/mock/ssm/path"}):
+        with patch.dict(os.environ, {CYHY_CONFIG_SSM_PATH_ENV: "/mock/ssm/path"}):
             config = read_config_ssm(model=TestModel)
             assert config.key == "value"
 
@@ -116,7 +121,7 @@ def test_read_config_ssm_parameter_not_found():
     )
 
     with patch("cyhy_config.cyhy_config.client", return_value=mock_ssm_client):
-        with patch.dict(os.environ, {"CYHY_CONFIG_SSM_PATH": "/mock/ssm/bad_path"}):
+        with patch.dict(os.environ, {CYHY_CONFIG_SSM_PATH_ENV: "/mock/ssm/bad_path"}):
             assert read_config_ssm() is None
 
 
@@ -128,7 +133,7 @@ def test_read_config_ssm_other_client_error():
     )
 
     with patch("cyhy_config.cyhy_config.client", return_value=mock_ssm_client):
-        with patch.dict(os.environ, {"CYHY_CONFIG_SSM_PATH": "/mock/ssm/bad_path"}):
+        with patch.dict(os.environ, {CYHY_CONFIG_SSM_PATH_ENV: "/mock/ssm/bad_path"}):
             with pytest.raises(ClientError):
                 read_config_ssm()
 
@@ -141,7 +146,7 @@ def test_read_config_ssm_invalid_toml():
     }
 
     with patch("cyhy_config.cyhy_config.client", return_value=mock_ssm_client):
-        with patch.dict(os.environ, {"CYHY_CONFIG_SSM_PATH": "/mock/ssm/path"}):
+        with patch.dict(os.environ, {CYHY_CONFIG_SSM_PATH_ENV: "/mock/ssm/path"}):
             with pytest.raises(tomllib.TOMLDecodeError):
                 read_config_ssm()
 
