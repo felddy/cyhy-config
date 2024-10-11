@@ -2,11 +2,15 @@
 # https://coverage.readthedocs.io/en/latest/config.html
 
 [run]
-source = src/example
+source = src/cyhy_config
 omit =
 branch = true
 
 [report]
+# The 'exclude_lines' option clears default exclusions, so we must explicitly
+# redefine the default pragma line. For more details, refer to:
+# https://coverage.readthedocs.io/en/latest/config.html#report-exclude-lines
 exclude_lines =
+    \# pragma: no cover
     if __name__ == "__main__":
 show_missing = true
