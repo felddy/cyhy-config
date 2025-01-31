@@ -75,11 +75,21 @@ setup(
         # that you indicate whether you support Python 2, Python 3 or both.
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",
+<<<<<<< HEAD
+=======
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+>>>>>>> 0da26c3a45b9a9c2a7d41ed2687b177a6f597116
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "Programming Language :: Python :: Implementation :: CPython",
     ],
+<<<<<<< HEAD
     python_requires=">=3.11",
+=======
+    python_requires=">=3.9",
+>>>>>>> 0da26c3a45b9a9c2a7d41ed2687b177a6f597116
     # What does your project relate to?
     keywords=["cyhy", "config"],
     packages=find_packages(where="src"),
@@ -87,6 +97,7 @@ setup(
     package_data={"cyhy_config": ["py.typed"]},
     py_modules=[splitext(basename(path))[0] for path in glob("src/*.py")],
     include_package_data=True,
+<<<<<<< HEAD
     install_requires=[
         "boto3",
         "pydantic",
@@ -102,6 +113,18 @@ setup(
         "dev": [
             "boto3-stubs",
             "pydantic-settings",
+=======
+    install_requires=["docopt", "schema", "setuptools"],
+    extras_require={
+        # IMPORTANT: Keep type hinting-related dependencies of the dev section
+        # in sync with the mypy pre-commit hook configuration (see
+        # .pre-commit-config.yaml). Any changes to type hinting-related
+        # dependencies here should be reflected in the additional_dependencies
+        # field of the mypy pre-commit hook to avoid discrepancies in type
+        # checking between environments.
+        "dev": [
+            "types-docopt",
+>>>>>>> 0da26c3a45b9a9c2a7d41ed2687b177a6f597116
             "types-setuptools",
         ],
         "test": [
